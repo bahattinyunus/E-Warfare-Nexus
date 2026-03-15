@@ -35,42 +35,40 @@
 
 ---
 
-## 🛠 Taktik Donanım Spesifikasyonu (Pro-Edition)
+## 🛠 Taktik Donanım Spesifikasyonu (Procurement & Engineering Level)
 
-**E-Warfare-Nexus**, 2026 şartnamesindeki "Yüksek Doğruluklu Yön Kestirimi" ve "Geniş Bant Karıştırma" hedefleri için özel bir donanım mimarisi gerektirir. Donanım ekibi için satınalma ve kurulum detayları:
+**E-Warfare-Nexus**, 2026 şartnamesindeki yüksek çözünürlüklü yön kestirimi, otonom AMC ve DRFM görevleri için aşağıdaki profesyonel donanım konfigürasyonunu temel alır. Donanım ekibi için satınalma (procurement) listesi:
 
 ### 1. Yazılım Tanımlı Radyo (SDR) Birimleri
-*   **SIGINT / DF Ünitesi: KrakenSDR v2**
-    *   *Spektrum*: 24 MHz - 1766 MHz (Opsiyonel downconverter ile 6 GHz).
-    *   *Kapasite*: 5x Coherent RTL-SDR alıcı.
-    *   *Görev*: MUSIC tabanlı DoA tespiti ve Remote-ID sniffing.
-    *   *Senkronizasyon*: Dahili noise source ile yazılımsal faz kalibrasyonu.
-*   **Geniş Bant Analiz: Ettus USRP B210**
-    *   *ADC/DAC*: 12-bit, 61.44 MS/s.
-    *   *FGPA*: Xilinx Spartan 6 (Hızlı FFT ve PRI analizi için).
-    *   *RF*: 2 RX, 2 TX (MIMO). Full-duplex operasyon.
-*   **EA / Spoofing: HackRF One + PortaPack H2**
-    *   *Saat Kaynağı*: 0.5ppm TCXO (Yanıltma sinyal stabilitesi için kritik).
-    *   *Yükseltici*: +20dB RF Pre-amp (LNA).
+| Birim | Marka / Model | Kritik Parametreler | Görev |
+| :--- | :--- | :--- | :--- |
+| **Coherent DF Receiver** | **KrakenSDR v2** | 5-Kanal Faz-Uyumlu, USB3.0, Korumalı Alüminyum Kasa | MUSIC DoA & Drone-ID Sniffing |
+| **Geniş Bant SIGINT** | **Ettus USRP N321** | 200 MHz BW, 10 MHz - 6 GHz, LO Sharing | LPI Tespit & Karşı-Hopping Takibi |
+| **Yüksek Güçlü EA** | **HackRF One + PortaPack H2** | 0.5ppm TCXO saat stabilitesi | GPS Spoofing & Reaktif Jamming |
 
-### 2. Anten Sistemi ve RF Ön-Uç (Front-End)
-*   **DF Array (Yön Bulma)**:
-    *   **Anten**: 5x Cam-mount Dipol (Dikey Polarizasyon).
-    *   **Geometri**: *Uniform Circular Array (UCA)*.
-    *   **Spacing**: Merkez frekansın ($f_c$) $\lambda/2$ oranında dizilim. 2.4GHz için ~6.2 cm yarıçap.
-*   **RF Kablolama (Kritik)**: 
-    *   **Tip**: **LMR-240** veya **LMR-400** (Low Loss).
-    *   **Koşul**: 5 kanal kablosu da **Phase-Matched** (tam olarak aynı fiziksel uzunlukta, +/- 1mm hata payı) olmalıdır.
-*   **Filtreleme**:
-    *   **Band-pass**: 433 MHz, 2.4 GHz ve 5.8 GHz için SAW filtre bankası (Out-of-band girişimleri engellemek için).
-    *   **LNA**: +15dB Gain, <1dB Noise Figure (Zayıf Remote-ID sinyalleri için).
+### 2. Anten ve RF Ön-Uç (Front-End) Donanımı
+*   **DF Anten Dizini (MUSIC/ESPRIT için)**:
+    *   **Marka/Model**: *Aaronia HyperLOG 4060* (Log-Periodic) veya *Taoglas TG.30* (5-kanal UCA dizilimi için).
+    *   **Yerleşim**: 5 adet dikey polarizasyonlu dipol anten, **Uniform Circular Array (UCA)** formunda, 2.4GHz merkez frekansı için tam olarak **62.5 mm yarıçaplı** dairesel düzleme monte edilmelidir.
+*   **Geniş Bant İzleme**:
+    *   **Marka/Model**: *Diamond Antenna D130J Discone*. (VHF/UHF/SHF menzili için en stabil omni-directional seçenek).
+*   **RF Kablolama (Kritik - Faz Uyumu İçin)**:
+    *   **Kablo**: **LMR-400 UltraFlex** (Bükülmeye dayanıklı, düşük kayıplı).
+    *   **Konnektör**: *Amphenol SMA-Male Gold Plated*.
+    *   **ÖNEMLİ**: DoA dizinindeki 5 kablo, VNA (Vector Network Analyzer) ile ölçülerek **elektriksel uzunluk bakımından <1° faz farkı** olacak şekilde eşlenmelidir.
+*   **Sinyal Koşullandırma**:
+    *   **LNA**: *Mini-Circuits ZX60-P103LN+* (+15dB Gain, ultra-low noise).
+    *   **Filtreler**: *Mini-Circuits VBPF Serisi* (2.4 GHz ve 433 MHz bant-geçiren).
 
-### 3. Hesaplama ve Güç Yönetimi
-*   **Analiz Birimi**: **NVIDIA Jetson AGX Orin 64GB**.
-    *   *Performance*: 275 TOPS (AI Inference ve Gerçek Zamanlı DSP için).
-    *   *OS*: Ubuntu 22.04 LTS (JetPack 6.0+).
-*   **Veri Depolama**: 1TB NVMe Gen4 SSD (Ham IQ kayıtları için >1.5 GB/s yazma hızı).
-*   **Güç**: 12V DC, Minimum 10A peak akımı. EMI korumalı DC-DC konvertör.
+### 3. İşleme Birimi ve Saha Altyapısı
+*   **Nexus Core (Yapay Zeka & DSP)**:
+    *   **Modül**: **NVIDIA Jetson AGX Orin 64GB Developer Kit**.
+    *   **Soğutma**: *Noctua NF-A4x10* aktif fanlı, endüstriyel tip IP67 muhafazalı soğutucu blok.
+    *   **Taşıyıcı Board**: *Forecr DSBOX-AGX* (Sertifikalı EMI/EMC korumalı).
+*   **Veri Depolama**: **Samsung 980 Pro 2TB NVMe M.2 SSD**. (1 GB/s sürekli IQ yazma kapasitesi için).
+*   **Güç Sistemi**:
+    *   **Batarya**: *LiFePO4 24V 40Ah* akıllı batarya paketi.
+    *   **Konvertör**: *Vicor DC-DC Buck-Boost* (Stabilize 12V/19V/5V dağıtımı için).
 
 ---
 
