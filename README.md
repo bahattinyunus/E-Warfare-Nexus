@@ -36,38 +36,35 @@
 
 ## 🛠 Taktik Donanım Spesifikasyonu (Procurement & Engineering Level)
 
-**E-Warfare-Nexus**, 2026 şartnamesindeki yüksek çözünürlüklü yön kestirimi, otonom AMC ve DRFM görevleri için aşağıdaki profesyonel donanım konfigürasyonunu temel alır. Donanım ekibi için satınalma (procurement) listesi:
+**E-Warfare-Nexus**, 2026 şartnamesindeki yüksek çözünürlüklü yön kestirimi, otonom AMC ve DRFM görevleri için aşağıdaki profesyonel donanım konfigürasyonunu temel alır. Donanım ekibi için satınalma (procurement) listesi ve detaylı linkler için [Satınalma Kılavuzu](assets/hardware/procurement_guide.md) dosyasına bakınız.
 
 ### 1. Yazılım Tanımlı Radyo (SDR) Birimleri
-| Birim | Marka / Model | Kritik Parametreler | Görev |
-| :--- | :--- | :--- | :--- |
-| **Coherent DF Receiver** | **KrakenSDR v2** | 5-Kanal Faz-Uyumlu, USB3.0, Korumalı Alüminyum Kasa | MUSIC DoA & Drone-ID Sniffing |
-| **Geniş Bant SIGINT** | **Ettus USRP N321** | 200 MHz BW, 10 MHz - 6 GHz, LO Sharing | LPI Tespit & Karşı-Hopping Takibi |
-| **Yüksek Güçlü EA** | **HackRF One + PortaPack H2** | 0.5ppm TCXO saat stabilitesi | GPS Spoofing & Reaktif Jamming |
+| Birim | Marka / Model | Kritik Parametreler | Görev | Procurement |
+| :--- | :--- | :--- | :--- | :--- |
+| **Coherent DF Receiver** | **KrakenSDR v2** | 5-Kanal Faz-Uyumlu, USB3.0 | MUSIC DoA & Drone-ID | [Satın Al](https://krakenrf.com/products/krakensdr) |
+| **Geniş Bant SIGINT** | **Ettus USRP N321** | 200 MHz BW, LO Sharing | LPI Tespit & Karşı-Hopping | [Teklif Al](https://www.egerate.com/tr/ettus-research) |
+| **Yüksek Güçlü EA** | **HackRF One V2** | PortaPack H2 + TCXO | GPS Spoofing & Jamming | [Satın Al](https://www.robotzade.com/urun/hackrf-one-portapack-h2-gelistirme-karti) |
 
 ### 2. Anten ve RF Ön-Uç (Front-End) Donanımı
 *   **DF Anten Dizini (MUSIC/ESPRIT için)**:
-    *   **Marka/Model**: *Aaronia HyperLOG 4060* (Log-Periodic) veya *Taoglas TG.30* (5-kanal UCA dizilimi için).
-    *   **Yerleşim**: 5 adet dikey polarizasyonlu dipol anten, **Uniform Circular Array (UCA)** formunda, 2.4GHz merkez frekansı için tam olarak **62.5 mm yarıçaplı** dairesel düzleme monte edilmelidir.
+    *   **Marka/Model**: [Aaronia HyperLOG 4060](https://aaronia.com/antennas/directional-log-periodic-antennas/hyperlog-series/) (Log-Periodic).
+    *   **Yerleşim**: 5 adet dikey polarizasyonlu dipol anten, **Uniform Circular Array (UCA)** formunda monte edilmelidir.
 *   **Geniş Bant İzleme**:
-    *   **Marka/Model**: *Diamond Antenna D130J Discone*. (VHF/UHF/SHF menzili için en stabil omni-directional seçenek).
-*   **RF Kablolama (Kritik - Faz Uyumu İçin)**:
-    *   **Kablo**: **LMR-400 UltraFlex** (Bükülmeye dayanıklı, düşük kayıplı).
-    *   **Konnektör**: *Amphenol SMA-Male Gold Plated*.
-    *   **ÖNEMLİ**: DoA dizinindeki 5 kablo, VNA (Vector Network Analyzer) ile ölçülerek **elektriksel uzunluk bakımından <1° faz farkı** olacak şekilde eşlenmelidir.
+    *   **Marka/Model**: [Diamond Antenna D130J Discone](https://www.dxengineering.com/parts/dmn-d130j).
+*   **RF Kablolama (Kritik)**:
+    *   **Kablo**: **LMR-400 UltraFlex**. Konnektör: *Amphenol SMA-Male Gold Plated*.
 *   **Sinyal Koşullandırma**:
-    *   **LNA**: *Mini-Circuits ZX60-P103LN+* (+15dB Gain, ultra-low noise).
-    *   **Filtreler**: *Mini-Circuits VBPF Serisi* (2.4 GHz ve 433 MHz bant-geçiren).
+    *   **LNA**: [Mini-Circuits ZX60-P103LN+](https://www.minicircuits.com/WebStore/dashboard.html?model=ZX60-P103LN%2B) (+15dB Gain, ultra-low noise).
+    *   **Filtreler**: *Mini-Circuits VBPF Serisi* (2.4 GHz ve 433 MHz).
 
 ### 3. İşleme Birimi ve Saha Altyapısı
-*   **Nexus Core (Yapay Zeka & DSP)**:
-    *   **Modül**: **NVIDIA Jetson AGX Orin 64GB Developer Kit**.
-    *   **Soğutma**: *Noctua NF-A4x10* aktif fanlı, endüstriyel tip IP67 muhafazalı soğutucu blok.
-    *   **Taşıyıcı Board**: *Forecr DSBOX-AGX* (Sertifikalı EMI/EMC korumalı).
-*   **Veri Depolama**: **Samsung 980 Pro 2TB NVMe M.2 SSD**. (1 GB/s sürekli IQ yazma kapasitesi için).
+*   **Nexus Core (AI & DSP)**:
+    *   **Modül**: [NVIDIA Jetson AGX Orin 64GB](https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-agx-orin/).
+    *   **Taşıyıcı Board**: [Forecr DSBOX-AGX](https://www.forecr.io/products/dsbox-agx-nvidia-jetson-agx-orin-industrial-box-pc) (Sertifikalı EMI/EMC korumalı).
+*   **Veri Depolama**: **Samsung 980 Pro 2TB NVMe M.2 SSD**.
 *   **Güç Sistemi**:
     *   **Batarya**: *LiFePO4 24V 40Ah* akıllı batarya paketi.
-    *   **Konvertör**: *Vicor DC-DC Buck-Boost* (Stabilize 12V/19V/5V dağıtımı için).
+    *   **Konvertör**: *Vicor DC-DC Buck-Boost*.
 
 ---
 
