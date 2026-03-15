@@ -1,5 +1,4 @@
-# E-Warfare-Nexus: PROPRIETARY & CONFIDENTIAL
-# Bu dosya sadece yetkili ekip kullanımı içindir.
+# E-Warfare-Nexus: Taktik Kontrol Modülü (Proje Ekibi İçin)
 import time
 import numpy as np
 from src.signal_processing.generator import SignalGenerator

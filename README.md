@@ -1,4 +1,4 @@
-# 📡 E-Warfare-Nexus: Özel Taktik Spektrum Çözümü
+# 📡 E-Warfare-Nexus: Taktik Spektrum Çözümü (Takım Deposu)
 
 [![Teknofest 2026](https://img.shields.io/badge/Teknofest-2026-blue.svg?style=for-the-badge)](https://teknofest.org)
 [![ASELSAN](https://img.shields.io/badge/Yürütücü-ASELSAN-orange.svg?style=for-the-badge)](https://aselsan.com.tr)
@@ -7,9 +7,8 @@
 
 ![E-Warfare-Nexus Banner](assets/banner.png)
 
-> [!IMPORTANT]
-> **GİZLİDİR / PROPRIETARY & CONFIDENTIAL**
-> Bu depo sadece yetkili görev personeli ve proje ekibi erişimi içindir. İçeriğin izinsiz paylaşılması veya kopyalanması kesinlikle yasaktır ve yasal sonuçlar doğuracaktır.
+> [!NOTE]
+> Bu depo **E-Warfare-Nexus Proje Ekibi** kullanımı için düzenlenmiştir. Geliştirme süreçleri takım içi standartlara uygun yürütülmektedir.
 
 ## 🌌 Proje Projeksiyonu
 **E-Warfare-Nexus**, 2026 ASELSAN Elektronik Harp Yarışması operasyonları için geliştirilmiş **özel ve gizli** bir sistemdir. Bu ekosistem, otonom sistemlerin (İHA/İDA) elektromanyetik ortamdaki durumsal farkındalığını ve saldırı kabiliyetini maksimize etmek için takıma özel olarak optimize edilmiştir.
@@ -193,19 +192,11 @@ python verify_eh.py
 
 ---
 
-## 🔐 Erişim ve Gizlilik (Team Only)
-
-Bu repo açık kaynaklı **değildir**. Geliştirme ve operasyon süreçleri sadece aşağıdaki kurallara göre yürütülür:
-*   **İzinli Erişim**: Sadece takım listesinde yer alan personelin erişim yetkisi vardır.
-*   **Veri Gizliliği**: IQ kayıtları ve saha test verileri asla ortak sunuculara yüklenemez.
-*   **Kod Güvenliği**: Modüller üzerinde yapılan değişiklikler kod gözden geçirme (code review) sonrası ana dallara birleştirilir.
-
 ---
 
-## 🛡 Yasal ve Disiplin Uyarısı
+## 🔐 Ekip İçi Kullanım ve Paylaşım
 
-> [!CAUTION]
-> Bu proje tamamen savunma sanayii yarışma simülasyonları ve operasyonel hazırlık için tasarlanmış **mülkiyet haklı** bir çalışmadır. İzinsiz paylaşım, 5237 Sayılı TCK'nın ilgili maddeleri ve takım içi gizlilik sözleşmeleri uyarınca suç teşkil eder.
+Bu proje takım üyeleri arasındaki iş akışını yönetmek için tasarlanmıştır. Lütfen modüller üzerinde yaptığınız değişiklikleri ilgili daldan (branch) pushladıktan sonra kod gözden geçirme (review) talep ediniz.
 
 ---
 
