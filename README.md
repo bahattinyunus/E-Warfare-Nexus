@@ -1,4 +1,4 @@
-# 📡 E-Warfare-Nexus: İleri Nesil Spektrum Domine Sistemi
+# 📡 E-Warfare-Nexus: Özel Taktik Spektrum Çözümü
 
 [![Teknofest 2026](https://img.shields.io/badge/Teknofest-2026-blue.svg?style=for-the-badge)](https://teknofest.org)
 [![ASELSAN](https://img.shields.io/badge/Yürütücü-ASELSAN-orange.svg?style=for-the-badge)](https://aselsan.com.tr)
@@ -7,12 +7,17 @@
 
 ![E-Warfare-Nexus Banner](assets/banner.png)
 
+> [!IMPORTANT]
+> **GİZLİDİR / PROPRIETARY & CONFIDENTIAL**
+> Bu depo sadece yetkili görev personeli ve proje ekibi erişimi içindir. İçeriğin izinsiz paylaşılması veya kopyalanması kesinlikle yasaktır ve yasal sonuçlar doğuracaktır.
+
 ## 🌌 Proje Projeksiyonu
-**E-Warfare-Nexus**, 2026 ASELSAN Elektronik Harp Yarışması şartnamesine tam uyumlu; sadece bir yazılım kütüphanesi değil, **Bilişsel Spektrum Üstünlüğü** sağlamayı hedefleyen bir ekosistemdir. Proje, otonom sistemlerin (İHA/İDA) elektromanyetik ortamdaki durumsal farkındalığını en üst düzeye çıkarmak için tasarlanmıştır.
+**E-Warfare-Nexus**, 2026 ASELSAN Elektronik Harp Yarışması operasyonları için geliştirilmiş **özel ve gizli** bir sistemdir. Bu ekosistem, otonom sistemlerin (İHA/İDA) elektromanyetik ortamdaki durumsal farkındalığını ve saldırı kabiliyetini maksimize etmek için takıma özel olarak optimize edilmiştir.
 
 ---
 
 ## 📑 Stratejik İçerik
+- [🛠 Taktik Donanım Spesifikasyonu (Hardware Spec)](#-taktik-donanım-spesifikasyonu-hardware-spec)
 - [🏗 Vizyon ve Bilişsel Strateji](#-vizyon-ve-bilişsel-strateji)
 - [🛰 2026 Yarışma Ekosistemi (Derin Dosya)](#-2026-yarışma-ekosistemi-derin-dosya)
   - [Operasyonel Senaryolar](#operasyonel-senaryolar)
@@ -27,6 +32,45 @@
 - [🗺 Stratejik Yol Haritası (v2.0 - 2027)](#-stratejik-yol-haritası-v20---2027)
 - [📜 Referanslar ve Veri Setleri](#-referanslar-ve-veri-setleri)
 - [🛡 Yasal Uyarı](#-yasal-uyarı)
+
+---
+
+## 🛠 Taktik Donanım Spesifikasyonu (Pro-Edition)
+
+**E-Warfare-Nexus**, 2026 şartnamesindeki "Yüksek Doğruluklu Yön Kestirimi" ve "Geniş Bant Karıştırma" hedefleri için özel bir donanım mimarisi gerektirir. Donanım ekibi için satınalma ve kurulum detayları:
+
+### 1. Yazılım Tanımlı Radyo (SDR) Birimleri
+*   **SIGINT / DF Ünitesi: KrakenSDR v2**
+    *   *Spektrum*: 24 MHz - 1766 MHz (Opsiyonel downconverter ile 6 GHz).
+    *   *Kapasite*: 5x Coherent RTL-SDR alıcı.
+    *   *Görev*: MUSIC tabanlı DoA tespiti ve Remote-ID sniffing.
+    *   *Senkronizasyon*: Dahili noise source ile yazılımsal faz kalibrasyonu.
+*   **Geniş Bant Analiz: Ettus USRP B210**
+    *   *ADC/DAC*: 12-bit, 61.44 MS/s.
+    *   *FGPA*: Xilinx Spartan 6 (Hızlı FFT ve PRI analizi için).
+    *   *RF*: 2 RX, 2 TX (MIMO). Full-duplex operasyon.
+*   **EA / Spoofing: HackRF One + PortaPack H2**
+    *   *Saat Kaynağı*: 0.5ppm TCXO (Yanıltma sinyal stabilitesi için kritik).
+    *   *Yükseltici*: +20dB RF Pre-amp (LNA).
+
+### 2. Anten Sistemi ve RF Ön-Uç (Front-End)
+*   **DF Array (Yön Bulma)**:
+    *   **Anten**: 5x Cam-mount Dipol (Dikey Polarizasyon).
+    *   **Geometri**: *Uniform Circular Array (UCA)*.
+    *   **Spacing**: Merkez frekansın ($f_c$) $\lambda/2$ oranında dizilim. 2.4GHz için ~6.2 cm yarıçap.
+*   **RF Kablolama (Kritik)**: 
+    *   **Tip**: **LMR-240** veya **LMR-400** (Low Loss).
+    *   **Koşul**: 5 kanal kablosu da **Phase-Matched** (tam olarak aynı fiziksel uzunlukta, +/- 1mm hata payı) olmalıdır.
+*   **Filtreleme**:
+    *   **Band-pass**: 433 MHz, 2.4 GHz ve 5.8 GHz için SAW filtre bankası (Out-of-band girişimleri engellemek için).
+    *   **LNA**: +15dB Gain, <1dB Noise Figure (Zayıf Remote-ID sinyalleri için).
+
+### 3. Hesaplama ve Güç Yönetimi
+*   **Analiz Birimi**: **NVIDIA Jetson AGX Orin 64GB**.
+    *   *Performance*: 275 TOPS (AI Inference ve Gerçek Zamanlı DSP için).
+    *   *OS*: Ubuntu 22.04 LTS (JetPack 6.0+).
+*   **Veri Depolama**: 1TB NVMe Gen4 SSD (Ham IQ kayıtları için >1.5 GB/s yazma hızı).
+*   **Güç**: 12V DC, Minimum 10A peak akımı. EMI korumalı DC-DC konvertör.
 
 ---
 
@@ -151,10 +195,19 @@ python verify_eh.py
 
 ---
 
-## 🛡 Yasal Uyarı
+## 🔐 Erişim ve Gizlilik (Team Only)
 
-> [!IMPORTANT]
-> Bu proje tamamen eğitim ve savunma sanayii yarışma simülasyonları için geliştirilmiştir. İzinsiz RF yayını yapmak BTK ve ilgili kanunlarca (5809 sayılı Elektronik Haberleşme Kanunu) yasaktır. Lütfen yasal limitlerde (ISM bantları vb.) kalınız.
+Bu repo açık kaynaklı **değildir**. Geliştirme ve operasyon süreçleri sadece aşağıdaki kurallara göre yürütülür:
+*   **İzinli Erişim**: Sadece takım listesinde yer alan personelin erişim yetkisi vardır.
+*   **Veri Gizliliği**: IQ kayıtları ve saha test verileri asla ortak sunuculara yüklenemez.
+*   **Kod Güvenliği**: Modüller üzerinde yapılan değişiklikler kod gözden geçirme (code review) sonrası ana dallara birleştirilir.
+
+---
+
+## 🛡 Yasal ve Disiplin Uyarısı
+
+> [!CAUTION]
+> Bu proje tamamen savunma sanayii yarışma simülasyonları ve operasyonel hazırlık için tasarlanmış **mülkiyet haklı** bir çalışmadır. İzinsiz paylaşım, 5237 Sayılı TCK'nın ilgili maddeleri ve takım içi gizlilik sözleşmeleri uyarınca suç teşkil eder.
 
 ---
 

@@ -1,7 +1,10 @@
+# E-Warfare-Nexus: PROPRIETARY & CONFIDENTIAL
+# Bu dosya sadece yetkili ekip kullanımı içindir.
 import time
 import numpy as np
 from src.signal_processing.generator import SignalGenerator
-from src.signal_processing.analyzer import SpectrumAnalyzer, ParameterExtractor
+from src.signal_processing.analyzer import SpectrumAnalyzer, ParameterExtractor, HopTracker
+from src.signal_processing.remote_id import RemoteIDDecoder
 from src.signal_processing.doa_estimator import DOAEstimator
 from src.signal_processing.lpi_detector import LPIDetector
 from src.ai_engine.classifier import SignalClassifier
@@ -30,15 +33,18 @@ def run_autonomous_loop():
     classifier = SignalClassifier()
     jammer_coord = JammerCoordinator(sample_rate)
     spoofer = GPSSpoofer()
+    hop_tracker = HopTracker()
+    remote_id_decoder = RemoteIDDecoder()
     
     autonomy = AutonomyManager(classifier, lpi_detector, jammer_coord)
     
     scenarios = [
         "Clear Sky",
-        "Long Range Search",
+        "Drone Swarm (Remote-ID)",
+        "Frequency Hopping Agile Emitter",
         "Tracking Radar",
         "LPI Stealth Radar",
-        "GNSS Spoofing Opportunity" # New scenario for deception
+        "GNSS Spoofing Opportunity"
     ]
     
     try:
@@ -55,14 +61,24 @@ def run_autonomous_loop():
                 _, noise = gen.generate_noise(duration, noise_level=0.2)
                 signal = gen.add_signals(signal, noise)
                 print("[ED] İzleme: Karmaşık (LPI?) sinyal saptandı. AI analizi tetiklendi.")
+            elif scenario_name == "Drone Swarm (Remote-ID)":
+                # Simulated Remote-ID packet data
+                rid_data = {"uas_id": "UAV-X-Delta", "lat": 41.0, "lon": 29.0, "alt": 100, "speed": 10}
+                decoded = remote_id_decoder.decode_packet(rid_data)
+                print(f"[ED] SIGINT: Remote-ID çözüldü! Drone ID: {decoded['uas_id']}, Konum: {decoded['lat']}, {decoded['lon']}")
+                _, signal = gen.generate_noise(duration, noise_level=0.1) # Background noise
+            elif scenario_name == "Frequency Hopping Agile Emitter":
+                current_f = 200e3 + (int(time.time()) % 5) * 50e3
+                hop_tracker.update(current_f, time.time())
+                _, signal = gen.generate_cw(current_f, duration)
+                print(f"[ED] İzleme: FHSS Sıçraması saptandı @ {current_f/1e3:.1f} kHz. Sıçrama hızı kestiriliyor...")
             elif scenario_name == "GNSS Spoofing Opportunity":
                 # Create a simulated weak GPS-like signal
                 t_gnss = np.linspace(0, duration, int(sample_rate*duration))
-                signal = np.sin(2*np.pi*150e3*t_gnss) # Simulated L1 baseband
+                signal = np.sin(2 * np.pi * 150e3 * t_gnss)
                 _, noise = gen.generate_noise(duration, noise_level=0.3)
                 signal = gen.add_signals(signal, noise)
                 print("[ED] İzleme: GNSS (GPS L1) bandında düşük SNR'lı sinyal saptandı.")
-            else:
                 _, signal = scen.get_scenario_signal(scenario_name, duration)
                 _, noise = gen.generate_noise(duration, noise_level=0.1)
                 signal = gen.add_signals(signal, noise)

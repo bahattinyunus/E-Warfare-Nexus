@@ -238,3 +238,52 @@ class DirectionFinder:
         
         angle = np.degrees(np.arcsin(val))
         return angle
+
+class HopTracker:
+    """
+    Tracks and predicts Frequency Hopping (FHSS) patterns.
+    Required for "FH Hop Takibi ve Kestirimi".
+    """
+    def __init__(self, history_size=50):
+        self.history = []
+        self.history_size = history_size
+        self.last_hop_time = 0
+
+    def update(self, freq, timestamp):
+        """Adds a detected hop frequency to the history."""
+        if not self.history or self.history[-1]["freq"] != freq:
+            self.history.append({"freq": freq, "time": timestamp})
+            if len(self.history) > self.history_size:
+                self.history.pop(0)
+            return True
+        return False
+
+    def estimate_hop_rate(self):
+        """Returns the detected hop rate in hops per second."""
+        if len(self.history) < 2:
+            return 0
+        durations = np.diff([h["time"] for h in self.history])
+        avg_dwell = np.mean(durations)
+        return 1.0 / avg_dwell if avg_dwell > 0 else 0
+
+    def predict_next_hop(self):
+        """
+        Attempts to predict the next frequency based on linear delta 
+        or common sequence patterns.
+        """
+        if len(self.history) < 3:
+            return None
+        
+        freqs = [h["freq"] for h in self.history]
+        deltas = np.diff(freqs)
+        # Check if it's a simple linear shift (ramp)
+        if np.std(deltas) < 1000:
+            return freqs[-1] + np.mean(deltas)
+        
+        # Check for repeating pattern
+        for length in range(2, len(freqs)//2):
+            pattern = freqs[-length:]
+            if freqs[-2*length:-length] == pattern:
+                return pattern[0] # Very simple circular pattern check
+                
+        return freqs[0] # Fallback to first seen in sequence if pattern is complex

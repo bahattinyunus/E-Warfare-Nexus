@@ -27,28 +27,52 @@ class SignalClassifier:
             else:
                 logging.info("DL model successfully initialized in SignalClassifier.")
 
-    def extract_features(self, freqs, magnitudes):
+    def calculate_cumulants(self, signal):
         """
-        Extracts basic spectral features from the power spectrum.
+        Computes Higher-Order Statistics (C40, C42) for blind AMC.
+        Distinguishes between M-PSK and M-QAM modulations.
+        """
+        if signal is None or len(signal) == 0:
+            return {"C40": 0, "C42": 0}
+
+        # Normalize signal energy
+        s = signal / np.sqrt(np.mean(np.abs(signal)**2) + 1e-12)
+        
+        m20 = np.mean(s**2)
+        m21 = np.mean(np.abs(s)**2)
+        m40 = np.mean(s**4)
+        m42 = np.mean(np.abs(s)**4)
+        
+        c40 = m40 - 3 * (m20**2)
+        c42 = m42 - np.abs(m20)**2 - 2 * (m21**2)
+        
+        return {"C40": np.abs(c40), "C42": np.abs(c42)}
+
+    def extract_features(self, freqs, magnitudes, raw_signal=None):
+        """
+        Extracts spectral and statistical features.
         """
         peak_idx = np.argmax(magnitudes)
         peak_freq = freqs[peak_idx]
         peak_mag = magnitudes[peak_idx]
 
-        # Bandwidth estimation: -3 dB occupancy
         threshold = peak_mag * 0.5
         occupied_indices = np.where(magnitudes > threshold)[0]
         bandwidth = freqs[occupied_indices[-1]] - freqs[occupied_indices[0]] if len(occupied_indices) > 1 else 0
 
-        # Spectral flatness (ratio of geometric to arithmetic mean) — detects FHSS
         eps = 1e-12
         spectral_flatness = np.exp(np.mean(np.log(magnitudes + eps))) / (np.mean(magnitudes) + eps)
+        
+        # Calculate HOS if raw signal is provided
+        cumulants = self.calculate_cumulants(raw_signal) if raw_signal is not None else {"C40": 1, "C42": -1}
 
         return {
             "peak_freq": peak_freq,
             "peak_mag": peak_mag,
             "bandwidth": bandwidth,
-            "spectral_flatness": spectral_flatness
+            "spectral_flatness": spectral_flatness,
+            "C40": cumulants["C40"],
+            "C42": cumulants["C42"]
         }
 
     def predict(self, features, pulse_params=None, magnitudes=None):
@@ -95,11 +119,22 @@ class SignalClassifier:
         if bw < 5000:
             return "CW", 0.90
 
-        # BPSK / QPSK by bandwidth
+        # Higher-Order Statistics (HOS) logic for M-QAM vs M-PSK
+        c40 = features.get("C40", 1)
+        c42 = features.get("C42", -1)
+        
+        # M-QAM typically has higher C42 than M-PSK
+        if c42 > 1.5:
+            return "16QAM", 0.72
+        elif c42 > 1.0:
+            return "64QAM", 0.68
+
+        # BPSK / QPSK by bandwidth and cumulants
         if bw < 35e3:
-            return "BPSK", 0.75
+            label = "BPSK" if c40 > 1.5 else "QPSK"
+            return label, 0.75
         elif bw < 100e3:
-            return "QPSK", 0.70
+            return "8PSK", 0.70
 
         # GNSS detection (constant high-bandwidth noise-like but structured)
         if bw > 250e3 and sf < 0.4:

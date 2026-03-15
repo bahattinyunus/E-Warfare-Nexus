@@ -1,4 +1,5 @@
 import numpy as np
+import time
 from abc import ABC, abstractmethod
 
 class JammerBase(ABC):
@@ -111,26 +112,35 @@ class SpoofingJammer(JammerBase):
         self.rgpo_delay_us = 10.0  # Microseconds — initial false range delay
         self.rgpo_rate = 1.5       # Microseconds per tick — drift rate
 
-    def generate_jamming_signal(self, duration, pulse_delay=None, doppler_shift_hz=0.0):
+    def generate_jamming_signal(self, duration, pulse_delay=None, doppler_shift_hz=0.0, mode="RGPO"):
         """
-        Generates DRFM spoofing signal with RGPO and optional Doppler shift.
+        Generates advanced DRFM deceptive signals.
+        - RGPO: Drifts range delay to pull tracker off.
+        - VGPO: Drifts Doppler shift to pull tracker off.
         """
         t = np.linspace(0, duration, int(self.sample_rate * duration), endpoint=False)
         
-        # Use current RGPO delay if not specified
-        delay_s = (pulse_delay if pulse_delay else self.rgpo_delay_us * 1e-6)
+        if mode == "RGPO":
+            # Gradually increase delay from start of capture
+            delay_s = self.rgpo_delay_us * 1e-6
+            self.rgpo_delay_us += self.rgpo_rate # Update for next tick
+        else:
+            delay_s = pulse_delay if pulse_delay else 10e-6
+
+        if mode == "VGPO":
+            # Simulate drifting Doppler (Velocity deception)
+            carrier_freq = 150e3
+            current_doppler = 1000 * np.sin(time.time() * 0.5) # Example drift
+            carrier_with_doppler = carrier_freq + current_doppler
+        else:
+            carrier_freq = 150e3
+            carrier_with_doppler = carrier_freq + doppler_shift_hz
         
-        # Drift the RGPO delay to lure the radar away
-        self.rgpo_delay_us += self.rgpo_rate
-        
-        # Base carrier
-        carrier_freq = 150e3  # Assume target radar at 150 kHz for sim
-        # Apply VGPO Doppler shift
-        carrier_with_doppler = carrier_freq + doppler_shift_hz
-        
-        # Delayed "echo" pulse with Doppler
+        # Generate the deceptive pulse
+        # delay_s determines the "false range"
+        # carrier_with_doppler determines the "false velocity"
         fake_echo = np.sin(2 * np.pi * carrier_with_doppler * (t - delay_s))
-        # Amplitude envelope (Gaussian pulse shape)
+        # Envelope to create a discrete pulse
         envelope = np.exp(-((t - delay_s)**2) / (2 * (5e-6)**2))
         fake_signal = self._get_amplitude() * fake_echo * envelope
         

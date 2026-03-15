@@ -6,9 +6,17 @@ RISK_SCORES = {
     "LPI_Radar": 9,
     "Radar_L":   6,
     "FHSS":      7,
+    "GNSS":      8,     # Important for nav warfare
+    "Analog_Telsiz": 5,
     "Comm_Link": 4,
     "Unknown":   3,
     "Noise":     0,
+}
+
+MISSION_WEIGHTS = {
+    "Defensive": {"Radar_FC": 1.5, "LPI_Radar": 1.2, "Comm_Link": 0.5},
+    "Deceptive": {"GNSS": 1.5, "Analog_Telsiz": 1.2},
+    "General": {}
 }
 
 class AutonomyManager:
@@ -118,13 +126,20 @@ class AutonomyManager:
             "recent_threats": recent
         }
 
-    def get_highest_priority_threat(self):
-        """Analyzes recent threat log to identify the most dangerous active emitter."""
+    def get_highest_priority_threat(self, mission_mode="General"):
+        """Analyzes recent threat log to identify the most dangerous active emitter using mission weights."""
         if not self.threat_log:
             return None
         
-        # Sort by risk (descending) and then confidence (descending)
-        sorted_threats = sorted(self.threat_log, key=lambda x: (x['risk'], x['confidence']), reverse=True)
+        weights = MISSION_WEIGHTS.get(mission_mode, {})
+        
+        def calculate_weighted_risk(entry):
+            base_risk = entry["risk"]
+            weight = weights.get(entry["label"], 1.0)
+            return base_risk * weight * entry["confidence"]
+
+        # Sort by weighted risk (descending)
+        sorted_threats = sorted(self.threat_log, key=calculate_weighted_risk, reverse=True)
         return sorted_threats[0]
 
     def get_system_status(self):
