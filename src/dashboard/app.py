@@ -31,7 +31,7 @@ geolocator      = Geolocator()
 tracker_mgr     = MultiTargetTrackerManager()
 
 # Available scenarios to cycle through
-SCENARIOS  = ["Clear Sky", "Long Range Search", "Tracking Radar", "LPI Stealth Radar", "Fire Control Radar", "FHSS Comms"]
+SCENARIOS  = ["Clear Sky", "Drone Swarm", "Tracking Radar", "FHSS Comms", "LoRa Sensors"]
 # System State & Hardware Simulation
 _tick       = [0]
 _tuning     = {"center_freq": 150.0, "gain": 45, "sample_rate": 1.0}

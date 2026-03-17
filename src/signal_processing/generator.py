@@ -73,7 +73,6 @@ class SignalGenerator:
         """
         Generates a Frequency Hopping Spread Spectrum (FHSS) signal.
         Jumps between given hop_frequencies every hop_duration.
-        This simulates modern tactical data links (e.g. Link-16) and frequency-agile drones.
         """
         t = self._t(total_duration)
         signal = np.zeros(len(t))
@@ -81,21 +80,48 @@ class SignalGenerator:
         samples_per_hop = int(self.sample_rate * hop_duration)
         num_hops = int(np.ceil(len(t) / samples_per_hop))
         
+        last_phase = 0
         for i in range(num_hops):
             start_idx = i * samples_per_hop
             end_idx = min((i + 1) * samples_per_hop, len(t))
-            
-            # Cyclic hopping over the provided sequence
             freq = hop_frequencies[i % len(hop_frequencies)]
             
-            # Phase continuity is not strictly maintained here, typical for simple FHSS models
             t_hop = t[start_idx:end_idx]
-            signal[start_idx:end_idx] = amplitude * np.cos(2 * np.pi * freq * t_hop)
+            # Ensure phase continuity
+            phase = 2 * np.pi * freq * (t_hop - t_hop[0]) + last_phase
+            signal[start_idx:end_idx] = amplitude * np.cos(phase)
+            last_phase = phase[-1] if len(phase) > 0 else last_phase
             
         return t, signal
+
+    def generate_lora(self, sf, bw, symbol, duration, amplitude=1.0):
+        """
+        Generates a LoRa Chirp Spread Spectrum (CSS) symbol.
+        :param sf: Spreading Factor (7-12)
+        :param bw: Bandwidth in Hz
+        :param symbol: Integer symbol value (0 to 2^sf - 1)
+        """
+        t = self._t(duration)
+        n_samples = len(t)
+        m = 2**sf
+        
+        # Base chirp frequency sweep from -BW/2 to BW/2
+        k = bw / duration # chirp rate
+        f0 = -bw / 2
+        
+        # Symbol shift
+        shift = symbol / m * duration
+        t_shifted = (t + shift) % duration
+        
+        phase = 2 * np.pi * (f0 * t_shifted + 0.5 * k * t_shifted**2)
+        return t, amplitude * np.cos(phase)
 
     def add_signals(self, signal1, signal2):
         """Adds two signals together (must be same length)."""
         if len(signal1) != len(signal2):
-            raise ValueError("Signals must be of the same length to add.")
+            # Pad shorter signal with zeros
+            target_len = max(len(signal1), len(signal2))
+            s1 = np.pad(signal1, (0, target_len - len(signal1)))
+            s2 = np.pad(signal2, (0, target_len - len(signal2)))
+            return s1 + s2
         return signal1 + signal2

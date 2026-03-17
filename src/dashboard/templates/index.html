@@ -1238,10 +1238,11 @@
                         let pw = data.params.PW ? (data.params.PW).toFixed(1) : '--';
                         document.getElementById('paramPulse').textContent = `${pri}ms / ${pw}µs`;
 
-                        // Mock modulation based on scenario
+                        // Mod / Type
                         let mod = "BİLİNMİYOR";
-                        if (data.scenario.includes("Radar")) mod = "FMCW/DARBELİ";
-                        if (data.scenario.includes("Comms")) mod = "FSK/PSK";
+                        if (data.params.IsLoRa) mod = "LoRa (CSS)";
+                        else if (data.scenario.includes("Radar")) mod = "FMCW/PULSE";
+                        else if (data.scenario.includes("Comms")) mod = "FSK/PSK";
                         document.getElementById('paramMod').textContent = mod;
                     }
 
@@ -1270,11 +1271,13 @@
                                 emitter.id = `mapTarget_${threat.id}`;
                                 if (idx === 0) emitter.style.boxShadow = '0 0 15px var(--neon-red), 0 0 5px #fff';
 
-                                // Simple scaling: 1deg lat ~ 111km. For 150px map, let's zoom in.
-                                const dLat = (lat - 39.9255) * 5000 + 50;
-                                const dLon = (lon - 32.8662) * 5000 + 50;
-                                emitter.style.top = `${Math.min(95, Math.max(5, 100 - dLat))}%`;
-                                emitter.style.left = `${Math.min(95, Math.max(5, dLon))}%`;
+                                // 1x1km Scaling (Center 500,500)
+                                // If simulated coords are 0-1000m
+                                // Assuming threat.geoloc is [x, y] in meters for this sim
+                                const x_pos = (lon / 1000) * 100;
+                                const y_pos = (lat / 1000) * 100;
+                                emitter.style.left = `${Math.min(95, Math.max(5, x_pos))}%`;
+                                emitter.style.top = `${Math.min(95, Math.max(5, 100 - y_pos))}%`;
                                 mapContainer.appendChild(emitter);
                             }
                         });

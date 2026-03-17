@@ -44,61 +44,55 @@ class ParameterExtractor:
 
     def estimate_parameters(self, time_domain_signal):
         """
-        Estimates PRI (Pulse Repetition Interval), PW (Pulse Width), Center Frequency, 
-        and Signal Type (Analog vs Digital).
+        Enhanced parameter extraction for multi-signal environments.
         """
-        # Simple threshold-based pulse detection
-        threshold = np.max(np.abs(time_domain_signal)) * 0.4
-        pulses = np.abs(time_domain_signal) > threshold
+        # FFT for multi-carrier check
+        N = len(time_domain_signal)
+        yf = fft(time_domain_signal)
+        xf = fftfreq(N, 1 / self.sample_rate)
+        xf_pos, yf_pos = xf[:N//2], 2.0/N * np.abs(yf[0:N//2])
         
-        # Find rising and falling edges
+        # Detect all significant carriers
+        peak_freqs = []
+        thresh = np.max(yf_pos) * 0.4
+        for i in range(1, len(yf_pos)-1):
+            if yf_pos[i] > thresh and yf_pos[i] > yf_pos[i-1] and yf_pos[i] > yf_pos[i+1]:
+                peak_freqs.append(float(np.abs(xf_pos[i])))
+
+        # Pulse Analysis
+        p_threshold = np.max(np.abs(time_domain_signal)) * 0.4
+        pulses = np.abs(time_domain_signal) > p_threshold
         diff = np.diff(pulses.astype(int))
-        rising_edges = np.where(diff == 1)[0]
-        falling_edges = np.where(diff == -1)[0]
+        rising = np.where(diff == 1)[0]
+        falling = np.where(diff == -1)[0]
         
-        if len(rising_edges) < 1 or len(falling_edges) < 1:
-            return {"PRI": None, "PW": None, "CenterFreq": None, "DutyCycle": None}
-            
-        # Ensure we have pairs of edges
-        min_len = min(len(rising_edges), len(falling_edges))
-        pws = (falling_edges[:min_len] - rising_edges[:min_len]) / self.sample_rate
-        
-        # Estimate Center Frequency from the first pulse (simplified)
-        center_freq = 0
-        if len(rising_edges) > 0:
-            pulse_segment = time_domain_signal[rising_edges[0]:falling_edges[0]]
-            if len(pulse_segment) > 8:
-                # Use FFT on the pulse to find its dominant frequency
-                N = len(pulse_segment)
-                yf = fft(pulse_segment)
-                xf = fftfreq(N, 1 / self.sample_rate)
-                idx = np.argmax(np.abs(yf[:N//2]))
-                center_freq = np.abs(xf[idx])
+        pri, pw, dc = 0.0, 0.0, 0.0
+        if len(rising) > 1 and len(falling) > 1:
+            min_len = min(len(rising), len(falling))
+            # Use indexing carefully
+            pws = (falling[:min_len].astype(float) - rising[:min_len].astype(float)) / self.sample_rate
+            pris = np.diff(rising.astype(float)) / self.sample_rate
+            pw = float(np.mean(pws))
+            pri = float(np.mean(pris))
+            dc = (pw / pri) * 100.0 if pri > 0 else 0.0
 
-        pris = np.diff(rising_edges) / self.sample_rate if len(rising_edges) > 1 else [0]
-        
-        # Analog vs Digital Detection (Kurtosis-based)
-        envelope = np.abs(time_domain_signal)
-        mean_env = np.mean(envelope) + 1e-12
-        std_env = np.std(envelope)
-        kurtosis = np.mean(((envelope - mean_env) / (std_env + 1e-12))**4)
-        signal_type = "Analog" if kurtosis > 3.5 else "Digital"
-
-        # Multiplexing & ECCM Detection (TERCİHEN requirements)
-        multiplexing = self.detect_multiplexing(time_domain_signal)
-        eccm = self.detect_dsss(time_domain_signal)
+        # LPI / LoRa Checks (CSS)
+        from src.signal_processing.lpi_detector import LPIDetector
+        lpi_det = LPIDetector(self.sample_rate)
+        lpi_results = lpi_det.detect_all(time_domain_signal)
+        lpi_v = lpi_results["final_verdict"]
 
         return {
-            "PRI": np.mean(pris) if len(pris) > 0 else 0,
-            "PW": np.mean(pws) if len(pws) > 0 else 0,
-            "Bandwidth": 1.0 / np.mean(pws) if len(pws) > 0 and np.mean(pws) > 0 else 0,
-            "CenterFreq": center_freq,
-            "DutyCycle": (np.mean(pws) / np.mean(pris)) * 100 if len(pris) > 0 and np.mean(pris) > 0 else 0,
-            "SignalType": signal_type,
-            "Multiplexing": multiplexing,
-            "ECCM": eccm,
-            "Power_RMS": np.sqrt(np.mean(envelope**2))
+            "PRI": pri,
+            "PW": pw,
+            "DutyCycle": dc,
+            "CenterFreq": peak_freqs[0] if peak_freqs else 0.0,
+            "PeakFreqs": peak_freqs,
+            "SignalCount": len(peak_freqs),
+            "LPI_Verdict": lpi_v,
+            "IsLoRa": lpi_results["stft_chirp"]["detected"] and lpi_results["wvd"]["detected"]
         }
+
 
     def detect_multiplexing(self, signal):
         """

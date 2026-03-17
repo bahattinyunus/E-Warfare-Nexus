@@ -39,49 +39,36 @@ def run_autonomous_loop():
     
     scenarios = [
         "Clear Sky",
-        "Drone Swarm (Remote-ID)",
-        "Frequency Hopping Agile Emitter",
+        "Drone Swarm",
         "Tracking Radar",
-        "LPI Stealth Radar",
-        "GNSS Spoofing Opportunity"
+        "FHSS Comms",
+        "LoRa Sensors"
     ]
+    
+    # Simulation settings
+    sensor_pos = (500, 500) # Meters from center
     
     try:
         for i, scenario_name in enumerate(scenarios, 1):
             print(f"--- [MİSYON {i}: {scenario_name}] ---")
             
-            # 1. EM Spektrumu Tara (Simülasyon / SDR)
-            if scenario_name == "Clear Sky":
-                _, signal = gen.generate_noise(duration, noise_level=0.1)
-                print("[ED] İzleme: Spektrum temiz. Dinleme devam ediyor...")
-            elif scenario_name == "LPI Stealth Radar":
-                t_lpi = np.linspace(0, duration, int(sample_rate*duration))
-                signal = np.cos(2*np.pi*(100e3*t_lpi + 50e6*t_lpi**2))
-                _, noise = gen.generate_noise(duration, noise_level=0.2)
-                signal = gen.add_signals(signal, noise)
-                print("[ED] İzleme: Karmaşık (LPI?) sinyal saptandı. AI analizi tetiklendi.")
-            elif scenario_name == "Drone Swarm (Remote-ID)":
-                # Simulated Remote-ID packet data
-                rid_data = {"uas_id": "UAV-X-Delta", "lat": 41.0, "lon": 29.0, "alt": 100, "speed": 10}
-                decoded = remote_id_decoder.decode_packet(rid_data)
-                print(f"[ED] SIGINT: Remote-ID çözüldü! Drone ID: {decoded['uas_id']}, Konum: {decoded['lat']}, {decoded['lon']}")
-                _, signal = gen.generate_noise(duration, noise_level=0.1) # Background noise
-            elif scenario_name == "Frequency Hopping Agile Emitter":
-                current_f = 200e3 + (int(time.time()) % 5) * 50e3
-                hop_tracker.update(current_f, time.time())
-                _, signal = gen.generate_cw(current_f, duration)
-                print(f"[ED] İzleme: FHSS Sıçraması saptandı @ {current_f/1e3:.1f} kHz. Sıçrama hızı kestiriliyor...")
-            elif scenario_name == "GNSS Spoofing Opportunity":
-                # Create a simulated weak GPS-like signal
-                t_gnss = np.linspace(0, duration, int(sample_rate*duration))
-                signal = np.sin(2 * np.pi * 150e3 * t_gnss)
-                _, noise = gen.generate_noise(duration, noise_level=0.3)
-                signal = gen.add_signals(signal, noise)
-                print("[ED] İzleme: GNSS (GPS L1) bandında düşük SNR'lı sinyal saptandı.")
-                _, signal = scen.get_scenario_signal(scenario_name, duration)
-                _, noise = gen.generate_noise(duration, noise_level=0.1)
-                signal = gen.add_signals(signal, noise)
-                print(f"[ED] İzleme: Aktif yayın saptandı ({scenario_name})")
+            # 1. EM Spektrumu Tara (Spatial Simülasyon)
+            t, signal = scen.get_scenario_signal(scenario_name, duration, sensor_pos=sensor_pos)
+            print(f"[ED] İzleme: {scenario_name} senaryosu aktif. Spektrum taranıyor...")
+
+            # 2. Teknik Parametre Çıkarımı & Yön Kestirimi
+            params = pe.estimate_parameters(signal)
+            if params.get("CenterFreq"):
+                print(f"[ED] Analiz: Frekans={params['CenterFreq']/1e3:.1f}kHz, Sinyal Sayısı={params['SignalCount']}")
+                if params.get("IsLoRa"):
+                    print("[ED] SIGINT: LoRa (CSS) sinyali saptandı! LPI skoru yüksek.")
+                
+                # DOA Estimation (Simulated multi-channel from single signal)
+                X_sim = np.tile(signal, (5, 1)) 
+                # Add delay based on DOA for UCA support demo
+                # (Ideally we'd use steering vectors here, but keeping it simple for loop)
+                estimated_angles, _ = doa.estimate_music(X_sim)
+                print(f"[ED] Konum: Yön kestirimi (MUSIC UCA) -> {estimated_angles[0]:.1f}°")
 
             # 2. Teknik Parametre Çıkarımı & Yön Kestirimi
             params = pe.estimate_parameters(signal)

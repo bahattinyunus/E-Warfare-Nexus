@@ -26,7 +26,7 @@ class NoiseJammer(JammerBase):
     """
     Implements Spot Noise Jamming (targeted bandwidth).
     """
-    def generate_jamming_signal(self, duration, noise_level=1.0):
+    def generate_jamming_signal(self, duration, noise_level=1.0, **kwargs):
         t = np.linspace(0, duration, int(self.sample_rate * duration), endpoint=False)
         amplitude = self._get_amplitude() * noise_level
         return t, np.random.normal(0, amplitude, len(t))
@@ -36,7 +36,7 @@ class BarrageJammer(JammerBase):
     Implements wideband Barrage Jamming.
     Covers a wide range of frequencies simultaneously. (Section 3.1)
     """
-    def generate_jamming_signal(self, duration, bandwidth_mhz=10.0):
+    def generate_jamming_signal(self, duration, bandwidth_mhz=10.0, **kwargs):
         t = np.linspace(0, duration, int(self.sample_rate * duration), endpoint=False)
         amplitude = self._get_amplitude()
         # White noise across full sampling bandwidth
@@ -46,7 +46,7 @@ class MultiToneJammer(JammerBase):
     """
     Emits multiple discrete CW tones to jam specific frequencies efficiently.
     """
-    def generate_jamming_signal(self, duration, tones_hz=[100e3, 200e3, 300e3]):
+    def generate_jamming_signal(self, duration, tones_hz=[100e3, 200e3, 300e3], **kwargs):
         t = np.linspace(0, duration, int(self.sample_rate * duration), endpoint=False)
         amplitude = self._get_amplitude() / len(tones_hz)
         signal = np.zeros_like(t)
@@ -59,13 +59,13 @@ class AdaptiveNoiseJammer(NoiseJammer):
     Electronic attack that adapts power based on detected threat severity.
     Automatically scales dBm up for higher risk threats.
     """
-    def generate_jamming_signal(self, duration, threat_risk=5):
+    def generate_jamming_signal(self, duration, threat_risk=5, **kwargs):
         # Scale power: risk 0-10 -> +0 to +10 dB boost
         boost = max(0, (threat_risk - 5) * 2.0)
         original_power = self.power_dbm
         self.set_power(original_power + boost)
         
-        t, signal = super().generate_jamming_signal(duration)
+        t, signal = super().generate_jamming_signal(duration, **kwargs)
         
         # Reset power for next cycle
         self.set_power(original_power)
@@ -75,80 +75,79 @@ class AdaptiveNoiseJammer(NoiseJammer):
 class SmartJammer(JammerBase):
     """
     Look-through Jamming: Cycles between listening and jamming to track target.
-    - During 'look' phase: receiver is active.
-    - During 'jam' phase: full power jamming.
-    This is more efficient than continuous barrage jamming.
+    Implements gated pulse train for "Sense-while-Jam".
     """
-    def __init__(self, sample_rate=1e6, look_ratio=0.2):
+    def __init__(self, sample_rate=1e6, look_ratio=0.2, gate_period_ms=5.0):
         super().__init__(sample_rate)
-        self.look_ratio = look_ratio  # Fraction of time spent listening
+        self.look_ratio = look_ratio 
+        self.gate_period_s = gate_period_ms / 1000.0
         self.active = False
 
-    def generate_jamming_signal(self, duration, target_detected=False, power_boost=2.0):
+    def generate_jamming_signal(self, duration, target_detected=True, **kwargs):
         t = np.linspace(0, duration, int(self.sample_rate * duration), endpoint=False)
-        if target_detected:
-            self.active = True
-            amplitude = self._get_amplitude() * power_boost
-            signal = np.zeros_like(t)
-            
-            # Jam for (1-look_ratio) of the time, listen for look_ratio
-            jam_end = int(len(t) * (1.0 - self.look_ratio))
-            signal[:jam_end] = np.random.normal(0, amplitude, jam_end)
-            # The remainder (look window) stays at zero so receiver can listen
-            return t, signal
-        else:
-            self.active = False
+        if not target_detected:
             return t, np.zeros_like(t)
+
+        amplitude = self._get_amplitude()
+        signal = np.random.normal(0, amplitude, len(t))
+        
+        # Apply periodic gating (Look-through)
+        # 1 inside jam window, 0 inside look window
+        gate = (t % self.gate_period_s) < (self.gate_period_s * (1.0 - self.look_ratio))
+        return t, signal * gate
 
 
 class SpoofingJammer(JammerBase):
     """
-    DRFM (Digital Radio Frequency Memory) Based Spoofing.
-    - Range Gate Pull-Off (RGPO): Creates a false range echo that gradually drifts.
-    - Velocity Gate Pull-Off (VGPO): Simulates a false Doppler shift.
+    DRFM (Digital Radio Frequency Memory) Based Deception.
+    - RGPO (Range Gate Pull-Off): False range.
+    - VGPO (Velocity Gate Pull-Off): False doppler.
+    - C&D (Coherent Deception): Mimicking target radar pulses.
     """
     def __init__(self, sample_rate=1e6):
         super().__init__(sample_rate)
-        self.rgpo_delay_us = 10.0  # Microseconds — initial false range delay
-        self.rgpo_rate = 1.5       # Microseconds per tick — drift rate
+        self.rgpo_offset_us = 5.0
+        self.vgpo_offset_hz = 100.0
 
-    def generate_jamming_signal(self, duration, pulse_delay=None, doppler_shift_hz=0.0, mode="RGPO"):
+    def generate_jamming_signal(self, duration, mode="RGPO", target_params=None, **kwargs):
         """
-        Generates advanced DRFM deceptive signals.
-        - RGPO: Drifts range delay to pull tracker off.
-        - VGPO: Drifts Doppler shift to pull tracker off.
+        Generates deceptive DRFM signals.
+        :param target_params: Dictionary with 'CenterFreq', 'PRI', 'PW'
         """
         t = np.linspace(0, duration, int(self.sample_rate * duration), endpoint=False)
+        if target_params is None:
+            target_params = {"CenterFreq": 150e3, "PRI": 1e-3, "PW": 50e-6}
+            
+        fc = target_params.get("CenterFreq", 150e3)
+        pri = target_params.get("PRI", 1e-3)
+        pw = target_params.get("PW", 50e-6)
+        
+        amplitude = self._get_amplitude()
         
         if mode == "RGPO":
-            # Gradually increase delay from start of capture
-            delay_s = self.rgpo_delay_us * 1e-6
-            self.rgpo_delay_us += self.rgpo_rate # Update for next tick
+            # Delay the fake pulse relative to expected arrival
+            delay_s = self.rgpo_offset_us * 1e-6
+            self.rgpo_offset_us += 1.0 # Drift range
+            
+            # Pulse mask with delay
+            pulse_mask = ((t - delay_s) % pri) < pw
+            signal = amplitude * np.cos(2 * np.pi * fc * (t - delay_s)) * pulse_mask
+            
+        elif mode == "VGPO":
+            # Shift frequency for velocity deception
+            f_fake = fc + self.vgpo_offset_hz
+            self.vgpo_offset_hz += 10.0 # Drift velocity
+            
+            pulse_mask = (t % pri) < pw
+            signal = amplitude * np.cos(2 * np.pi * f_fake * t) * pulse_mask
         else:
-            delay_s = pulse_delay if pulse_delay else 10e-6
-
-        if mode == "VGPO":
-            # Simulate drifting Doppler (Velocity deception)
-            carrier_freq = 150e3
-            current_doppler = 1000 * np.sin(time.time() * 0.5) # Example drift
-            carrier_with_doppler = carrier_freq + current_doppler
-        else:
-            carrier_freq = 150e3
-            carrier_with_doppler = carrier_freq + doppler_shift_hz
-        
-        # Generate the deceptive pulse
-        # delay_s determines the "false range"
-        # carrier_with_doppler determines the "false velocity"
-        fake_echo = np.sin(2 * np.pi * carrier_with_doppler * (t - delay_s))
-        # Envelope to create a discrete pulse
-        envelope = np.exp(-((t - delay_s)**2) / (2 * (5e-6)**2))
-        fake_signal = self._get_amplitude() * fake_echo * envelope
-        
-        return t, fake_signal
+            signal = np.zeros_like(t)
+            
+        return t, signal
 
     def reset_rgpo(self):
         """Resets the RGPO drift counter (start a new deception run)."""
-        self.rgpo_delay_us = 10.0
+        self.rgpo_offset_us = 5.0
 
 
 class FrequencyHoppingJammer(JammerBase):
@@ -193,7 +192,7 @@ class FrequencyHoppingJammer(JammerBase):
         avg_delta = np.mean(deltas)
         return self.detected_hops[-1] + avg_delta
 
-    def generate_jamming_signal(self, duration, current_hop_index=0, target_freq=None):
+    def generate_jamming_signal(self, duration, current_hop_index=0, target_freq=None, **kwargs):
         """
         Produces targeted noise jamming at the predicted or known hop frequency.
         """
@@ -224,7 +223,7 @@ class GNSSJammer(JammerBase):
         super().__init__(sample_rate)
         self.gps_l1_freq = 150e3  # Scaled for simulation (Real is 1575.42 MHz)
 
-    def generate_jamming_signal(self, duration, target_lat=39.9, target_lon=32.8):
+    def generate_jamming_signal(self, duration, target_lat=39.9, target_lon=32.8, **kwargs):
         """
         Generates a spoofing signal that deceives the receiver into a false location.
         In this simulation, we modulate the time-of-flight phase.
@@ -252,7 +251,7 @@ class AnalogVoiceJammer(JammerBase):
         super().__init__(sample_rate)
         self.carrier_freq = 120e3 # FM/AM base frequency for sim
 
-    def generate_jamming_signal(self, duration, mode="FM", message_freq=1e3):
+    def generate_jamming_signal(self, duration, mode="FM", message_freq=1e3, **kwargs):
         """
         Generates AM/FM modulated deception signals.
         """

@@ -131,22 +131,55 @@ class LPIDetector:
             "detected": detected
         }
 
+    def extract_ai_features(self, signal):
+        """
+        Extracts a feature vector for machine learning/DL classification.
+        Features: Spectral Kurtosis, Crest Factor, Skewness, Pulse-to-Pulse Variance.
+        """
+        # Temporal Features
+        abs_sig = np.abs(signal)
+        rms = np.sqrt(np.mean(abs_sig**2)) + 1e-12
+        crest_factor = np.max(abs_sig) / rms
+        
+        # Spectral Features
+        fft_mag = np.abs(fft(signal))
+        fft_mag /= np.max(fft_mag) + 1e-12
+        spectral_skew = np.mean((fft_mag - np.mean(fft_mag))**3) / (np.std(fft_mag)**3 + 1e-12)
+        spectral_kurtosis = np.mean((fft_mag - np.mean(fft_mag))**4) / (np.std(fft_mag)**4 + 1e-12)
+
+        # LPI specific: Concentration from WVD (simplified)
+        wvd_res = self.wvd_detection(signal)
+        
+        return {
+            "crest_factor": float(crest_factor),
+            "spectral_skew": float(spectral_skew),
+            "spectral_kurtosis": float(spectral_kurtosis),
+            "lpi_concentration": wvd_res["concentration_ratio"],
+            "feature_vector": [float(crest_factor), float(spectral_skew), float(spectral_kurtosis), wvd_res["concentration_ratio"]]
+        }
+
     def detect_all(self, signal):
         """
         Runs all four detection methods and returns a combined verdict.
+        Includes AI-ready features in the output.
         """
         e = self.energy_detection(signal)
         s = self.svd_detection(signal)
         c = self.stft_chirp_detection(signal)
         w = self.wvd_detection(signal)
+        ai_feats = self.extract_ai_features(signal)
 
+        # Weighing methods: WVD and SVD are more robust for LPI than simple energy
         votes = sum([e["detected"], s["detected"], c["detected"], w["detected"]])
+        is_lpi = (s["detected"] or w["detected"]) and votes >= 2
+
         return {
             "energy": e,
             "svd": s,
             "stft_chirp": c,
             "wvd": w,
-            "final_verdict": "DETECTED" if votes >= 2 else "CLEAR",
+            "ai_features": ai_feats,
+            "final_verdict": "LPI_DETECTED" if is_lpi else ("SIGNAL_DETECTED" if votes >= 1 else "CLEAR"),
             "confidence": votes / 4.0,
             "confidence_text": f"{votes}/4 methods triggered"
         }
